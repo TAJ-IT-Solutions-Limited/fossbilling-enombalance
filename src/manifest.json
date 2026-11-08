@@ -1,0 +1,12 @@
+{
+  "id": "enombalance",
+  "type": "mod",
+  "name": "Enom balance",
+  "description": "Shows the Enom account balance on the admin dashboard. Reads the registrar already configured in FOSSBilling and calls GetBalance only.",
+  "homepage_url": "https://github.com/TAJ-IT-Solutions-Limited/fossbilling-enombalance",
+  "author": "TAJHOST",
+  "author_url": "https://tajhost.com",
+  "license": "Apache 2.0 - https://www.apache.org/licenses/LICENSE-2.0",
+  "version": "1.0.0",
+  "minimum_fossbilling_version": "0.8.3"
+}
