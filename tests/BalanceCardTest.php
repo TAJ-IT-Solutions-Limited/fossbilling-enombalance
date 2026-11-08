@@ -134,7 +134,7 @@ final class BalanceCardTest extends TestCase
         $service = file_get_contents(dirname(__DIR__) . '/src/Service.php');
         self::assertIsString($api);
         self::assertIsString($service);
-        self::assertSame(2, substr_count($api, "checkPermissions('enombalance', 'manage')"));
+        self::assertSame(3, substr_count($api, "checkPermissions('enombalance', 'manage')"));
         self::assertStringContainsString("'manage' => []", $service);
         self::assertStringContainsString("'manage_settings' => []", $service);
     }
