@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Enom balance widget states</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    .card { border: 1px solid #ccc; padding: 1rem; margin: 0 0 1rem; }
+    .ok { background: #e8f4ff; }
+    .low { background: #fde8e8; }
+    .error { background: #fff6e0; }
+    .badge { background: #b42318; color: white; padding: 0.1rem 0.4rem; }
+  </style>
+</head>
+<body>
+  <h1>Enom balance</h1>
+  <section class="card ok" lang="en" dir="ltr">
+    <strong>Enom balance: $42.50 (updated 09:15)</strong>
+    <span>Available for purchases: $40.00</span>
+  </section>
+  <section class="card low" lang="en" dir="ltr">
+    <strong>Enom balance: $3.00 (updated 09:15)</strong>
+    <span class="badge">Low balance</span>
+  </section>
+  <section class="card error" lang="en" dir="ltr">
+    <strong>Could not read Enom balance</strong>
+  </section>
+  <section class="card ok" lang="ar" dir="rtl">
+    <strong>رصيد Enom: $42.50 (تم التحديث 09:15)</strong>
+    <span>المتاح للشراء: $40.00</span>
+  </section>
+  <section class="card low" lang="ar" dir="rtl">
+    <strong>رصيد Enom: $3.00 (تم التحديث 09:15)</strong>
+    <span class="badge">الرصيد منخفض</span>
+  </section>
+  <section class="card error" lang="ar" dir="rtl">
+    <strong>تعذر قراءة رصيد Enom</strong>
+  </section>
+</body>
+</html>
