@@ -78,17 +78,16 @@ class Service implements InjectionAwareInterface, WidgetProviderInterface
      */
     public function card(bool $refresh = false, ?int $staffId = null): array
     {
+        unset($staffId);
+        $this->assertManage();
         $now = new \DateTimeImmutable('now');
         $store = new BalanceCache($this->di['cache']);
         if (!$refresh) {
-            [$cached, $hit] = $store->remember('enombalance.card', BalanceCard::CACHE_SECONDS, fn (): array => $this->freshCard($now));
-            if ($hit) {
-                return $cached;
-            }
+            [$cached] = $store->remember('enombalance.card', BalanceCard::CACHE_SECONDS, fn (): array => $this->freshCard($now));
 
             return $cached;
         }
-        if ($staffId !== null && $store->locked('enombalance.refresh.' . $staffId)) {
+        if ($store->locked('enombalance.refresh')) {
             $cached = $this->cacheGet('enombalance.card');
             if (is_array($cached)) {
                 return $cached;
@@ -97,11 +96,31 @@ class Service implements InjectionAwareInterface, WidgetProviderInterface
 
         $card = $this->freshCard($now);
         $this->cacheSet('enombalance.card', $card, BalanceCard::CACHE_SECONDS);
-        if ($staffId !== null) {
-            $this->cacheSet('enombalance.refresh.' . $staffId, '1', 60);
-        }
+        $this->cacheSet('enombalance.refresh', '1', 60);
 
         return $card;
+    }
+
+    public static function alertRecipient(?string $companyEmail, ?string $cronEmail): ?string
+    {
+        $to = trim((string) $companyEmail);
+        $cron = trim((string) $cronEmail);
+        if ($to === '' || ($cron !== '' && strcasecmp($to, $cron) === 0)) {
+            return null;
+        }
+
+        return $to;
+    }
+
+    private function assertManage(): void
+    {
+        if (!isset($this->di['mod_service'])) {
+            return;
+        }
+        $staff = $this->di['mod_service']('staff');
+        if (is_object($staff) && method_exists($staff, 'checkPermissions')) {
+            $staff->checkPermissions('enombalance', 'manage');
+        }
     }
 
     /**
@@ -170,20 +189,24 @@ class Service implements InjectionAwareInterface, WidgetProviderInterface
     {
         try {
             $system = $this->di['mod_service']('system');
-            $from = (string) ($system->getParams([])['email'] ?? '');
-            $admins = $this->di['db']->find('Admin', '1=1');
+            $company = is_object($system) && method_exists($system, 'getParamValue')
+                ? (string) $system->getParamValue('company_email')
+                : '';
+            $cron = $this->di['db']->findOne('Admin', 'system_name = ?', ['cron']);
+            $cronEmail = is_object($cron) ? (string) ($cron->email ?? '') : '';
+            $to = self::alertRecipient($company, $cronEmail);
+            if ($to === null) {
+                $this->di['logger']->warning('Enom balance alert was not sent');
+
+                return;
+            }
             $subject = (string) ($card['low_label'] ?? 'Low balance');
             $body = (string) ($card['title'] ?? $subject);
-            $email = $this->di['mod_service']('email');
-            foreach ($admins as $admin) {
-                $to = (string) ($admin->email ?? '');
-                if ($to === '' || $from === '') {
-                    continue;
-                }
-                $email->sendMail($to, $from, $subject, $body);
-            }
+            $this->di['mod_service']('email')->sendMail($to, $to, $subject, $body);
         } catch (\Throwable $e) {
-            return;
+            if (isset($this->di['logger'])) {
+                $this->di['logger']->warning('Enom balance alert was not sent');
+            }
         }
     }
 

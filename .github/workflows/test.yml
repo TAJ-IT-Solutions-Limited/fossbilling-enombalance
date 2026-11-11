@@ -17,6 +17,7 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           coverage: none
-      - run: find src -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: find src tests -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: php tests/alert.php
       - run: composer update --no-interaction --prefer-dist
       - run: vendor/bin/phpunit
