@@ -1,7 +1,7 @@
 {% if admin %}
     {% set card = admin.enombalance_card() %}
     <div class="alert {{ card.low ? 'alert-danger' : (card.state == 'error' ? 'alert-warning' : 'alert-info') }} mb-3" role="status" lang="{{ card.locale }}" dir="{{ card.dir }}">
-        <strong>{{ card.title }}</strong>
+        <strong><a class="alert-link" href="{{ 'extension/settings/enombalance'|url }}">{{ card.title }}</a></strong>
         {% if card.available_label %}
             <span class="ms-2">{{ card.available_label }}</span>
         {% endif %}
