@@ -8,4 +8,6 @@ The module does not ask for an API token. It loads the existing Enom `TldRegistr
 
 Copy is English and Arabic. A failure says "Could not read Enom balance" and redacts credential-like text.
 
-This repository is private until Simon says to publish. Do not tag, release, or install it on billing.tajhost.com from this branch.
+This repository stays private until Simon says to publish.
+
+`php bin/package.php` writes `dist/enombalance-<version>.tar` for cPanel. The archive has no wrapping folder. Extract it so `manifest.json` lands at `modules/Enombalance/manifest.json`. It omits `preview/` and `tests/`, and the file contents are LF. Activate it with the admin API `extension/activate` using `type` `mod` and `id` `enombalance`. Building the archive does not install it.
