@@ -22,19 +22,11 @@ final class BalanceCard
     public static function fromResult(array $result, string $locale, \DateTimeImmutable $updatedAt): array
     {
         $arabic = str_starts_with(strtolower($locale), 'ar');
-        if (empty($result['ok'])) {
-            return [
-                'state' => 'error',
-                'locale' => $arabic ? 'ar' : 'en',
-                'dir' => $arabic ? 'rtl' : 'ltr',
-                'title' => $arabic ? 'تعذر قراءة رصيد Enom' : 'Could not read Enom balance',
-                'detail' => self::redactedError($result),
-                'low' => false,
-                'updated_at' => $updatedAt->format('H:i'),
-            ];
+        if (empty($result['ok']) || !self::hasAmount($result['balance'] ?? null)) {
+            return self::errorCard($result, $arabic, $updatedAt);
         }
 
-        $balance = self::money($result['balance'] ?? null);
+        $balance = self::money($result['balance']);
         $available = array_key_exists('available_balance', $result)
             ? self::money($result['available_balance'])
             : null;
@@ -82,6 +74,28 @@ final class BalanceCard
         }
 
         return $lastAlertDay !== $now->format('Y-m-d');
+    }
+
+    private static function hasAmount(mixed $value): bool
+    {
+        return $value !== null && $value !== '' && is_numeric($value);
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     * @return array<string, mixed>
+     */
+    private static function errorCard(array $result, bool $arabic, \DateTimeImmutable $updatedAt): array
+    {
+        return [
+            'state' => 'error',
+            'locale' => $arabic ? 'ar' : 'en',
+            'dir' => $arabic ? 'rtl' : 'ltr',
+            'title' => $arabic ? 'تعذر قراءة رصيد Enom' : 'Could not read Enom balance',
+            'detail' => self::redactedError($result),
+            'low' => false,
+            'updated_at' => $updatedAt->format('H:i'),
+        ];
     }
 
     /**

@@ -90,6 +90,8 @@ function package_assert(string $tarPath, array $files): void
         fwrite(STDERR, "package is wrapped\n");
         exit(1);
     }
+    package_assert_tar_modes($tarPath);
+    package_extract_check($tarPath, $files, 'tar');
 }
 
 function package_tar(string $path, array $files): void
@@ -127,7 +129,8 @@ function package_header(string $name, string $data, string $type): string
 {
     $header = str_repeat("\0", 512);
     package_put($header, 0, $name);
-    package_put($header, 100, sprintf('%07o', 0644) . "\0");
+    $mode = $type === '5' ? 0755 : 0644;
+    package_put($header, 100, sprintf('%07o', $mode) . "\0");
     package_put($header, 108, sprintf('%07o', 0) . "\0");
     package_put($header, 116, sprintf('%07o', 0) . "\0");
     package_put($header, 124, sprintf('%011o', strlen($data)) . "\0");
@@ -150,5 +153,100 @@ function package_put(string &$header, int $offset, string $value): void
     $length = strlen($value);
     for ($i = 0; $i < $length; $i++) {
         $header[$offset + $i] = $value[$i];
+    }
+}
+
+function package_assert_tar_modes(string $path): void
+{
+    $data = (string) file_get_contents($path);
+    $offset = 0;
+    $length = strlen($data);
+    $seen = 0;
+    while ($offset + 512 <= $length) {
+        $header = substr($data, $offset, 512);
+        if ($header === str_repeat("\0", 512)) {
+            break;
+        }
+        $name = rtrim(substr($header, 0, 100), "\0");
+        $mode = octdec(trim(substr($header, 100, 8)));
+        $uid = octdec(trim(substr($header, 108, 8)));
+        $gid = octdec(trim(substr($header, 116, 8)));
+        $size = octdec(trim(substr($header, 124, 12)));
+        $type = $header[156];
+        $expect = $type === '5' ? 0755 : 0644;
+        if ($uid !== 0 || $gid !== 0 || $mode !== $expect) {
+            fwrite(STDERR, "tar mode for $name is " . decoct($mode) . " uid $uid gid $gid\n");
+            exit(1);
+        }
+        $seen++;
+        $offset += 512 + (int) (ceil($size / 512) * 512);
+    }
+    if ($seen === 0) {
+        fwrite(STDERR, "tar has no entries\n");
+        exit(1);
+    }
+}
+
+function package_extract_check(string $archive, array $files, string $kind): void
+{
+    if (PHP_OS_FAMILY === 'Windows') {
+        return;
+    }
+    $uid = trim((string) shell_exec('id -u'));
+    if ($uid === '' || $uid === '0') {
+        fwrite(STDERR, "extract check must run as a normal user\n");
+        exit(1);
+    }
+    $tmp = sys_get_temp_dir() . '/pkg-' . bin2hex(random_bytes(4));
+    if (!mkdir($tmp, 0700) && !is_dir($tmp)) {
+        fwrite(STDERR, "cannot create extract dir\n");
+        exit(1);
+    }
+    $command = $kind === 'tar'
+        ? 'tar -xf ' . escapeshellarg($archive) . ' -C ' . escapeshellarg($tmp)
+        : 'unzip -q ' . escapeshellarg($archive) . ' -d ' . escapeshellarg($tmp);
+    exec($command, $output, $code);
+    if ($code !== 0) {
+        fwrite(STDERR, "extract failed\n");
+        exit(1);
+    }
+    $found = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($tmp, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::CHILD_FIRST
+    );
+    foreach ($iterator as $file) {
+        $rel = substr($file->getPathname(), strlen($tmp) + 1);
+        $rel = str_replace('\\', '/', $rel);
+        $mode = fileperms($file->getPathname()) & 0777;
+        if ($file->isDir()) {
+            if ($mode !== 0755) {
+                fwrite(STDERR, "extracted directory $rel is " . decoct($mode) . "\n");
+                exit(1);
+            }
+            continue;
+        }
+        if ($mode !== 0644) {
+            fwrite(STDERR, "extracted file $rel is " . decoct($mode) . "\n");
+            exit(1);
+        }
+        $body = file_get_contents($file->getPathname());
+        if ($body === false) {
+            fwrite(STDERR, "cannot read $rel\n");
+            exit(1);
+        }
+        $found[$rel] = $body;
+    }
+    ksort($files);
+    ksort($found);
+    if (array_keys($found) !== array_keys($files)) {
+        fwrite(STDERR, "extracted file list does not match\n");
+        exit(1);
+    }
+    foreach ($files as $name => $data) {
+        if ($found[$name] !== $data) {
+            fwrite(STDERR, "extracted bytes differ for $name\n");
+            exit(1);
+        }
     }
 }

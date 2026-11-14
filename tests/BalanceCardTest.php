@@ -49,6 +49,28 @@ final class BalanceCardTest extends TestCase
         self::assertStringContainsString('[redacted]', $card['detail']);
     }
 
+    public function testMissingBalanceIsAnErrorAndDoesNotAlert(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-08 09:15:00');
+        $cases = [
+            ['ok' => true, 'command' => 'GetBalance'],
+            ['ok' => true, 'balance' => null],
+            ['ok' => true, 'balance' => ''],
+            ['ok' => true, 'balance' => 'n/a'],
+        ];
+        foreach ($cases as $result) {
+            $card = BalanceCard::fromResult($result, 'en', $now);
+            self::assertSame('error', $card['state']);
+            self::assertSame('Could not read Enom balance', $card['title']);
+            self::assertFalse(BalanceCard::shouldAlert(10.0, $card, null, $now));
+            self::assertSame('error', BalanceCard::applyThreshold($card, 10.0)['state']);
+        }
+
+        $zero = BalanceCard::fromResult(['ok' => true, 'balance' => '0'], 'en', $now);
+        self::assertSame('ok', $zero['state']);
+        self::assertSame('Enom balance: $0.00 (updated 09:15)', $zero['title']);
+    }
+
     public function testThresholdMarksLowAndAlertsOncePerDay(): void
     {
         $now = new \DateTimeImmutable('2026-11-08 09:15:00');
