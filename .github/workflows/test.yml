@@ -21,6 +21,7 @@ jobs:
       - name: Build the install package
         run: php bin/package.php
       - run: php tests/alert.php
+      - run: php tests/cron.php
       - name: Reject Twig names FOSSBilling 0.8.9 does not register
         run: php tests/twig-filters.php
       - run: composer update --no-interaction --prefer-dist

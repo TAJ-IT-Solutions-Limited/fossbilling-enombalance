@@ -60,6 +60,25 @@ class Service implements InjectionAwareInterface, WidgetProviderInterface
         ];
     }
 
+    public static function onAfterAdminCronRun(\Box_Event $event): void
+    {
+        $event->getDi()['mod_service']('enombalance')->checkBalanceFromCron();
+    }
+
+    public function checkBalanceFromCron(): void
+    {
+        if (!isset($this->di['cache'])) {
+            return;
+        }
+        $store = new BalanceCache($this->di['cache']);
+        if ($store->locked('enombalance.cron')) {
+            return;
+        }
+        $store->lock('enombalance.cron', 3600);
+        $now = new \DateTimeImmutable('now');
+        $store->remember('enombalance.card', BalanceCard::CACHE_SECONDS, fn (): array => $this->freshCard($now));
+    }
+
     /**
      * @return array<string, mixed>
      */
