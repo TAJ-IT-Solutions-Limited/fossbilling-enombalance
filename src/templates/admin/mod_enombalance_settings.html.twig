@@ -7,7 +7,7 @@
 <div class="card" lang="en">
     <div class="card-header"><h3 class="card-title">Enom balance</h3></div>
     <div class="card-body">
-        <form method="post" action="{{ 'api/admin/enombalance/update_settings'|url }}" class="api-form" data-api-reload="1">
+        <form action="{{ 'enombalance/update_settings'|api_url(role: 'admin') }}" {{ fb_api_form({message: 'Settings saved'|trans, redirect: 'extension/settings/enombalance'|url}) }}>
             <label for="low_balance_threshold">Low-balance threshold</label>
             <input id="low_balance_threshold" class="form-control" name="low_balance_threshold" value="{{ settings.low_balance_threshold }}" inputmode="decimal">
             <p class="text-muted">Leave empty to disable the alert. Below this amount the dashboard card shows a low-balance badge and admins receive one email per day.</p>

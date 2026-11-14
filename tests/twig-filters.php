@@ -50,8 +50,12 @@ foreach ($iterator as $file) {
     }
     $relative = substr($file->getPathname(), strlen($root) + 1);
     $relative = str_replace('\\', '/', $relative);
-    foreach (twig_unknown((string) file_get_contents($file->getPathname()), $filters, $functions) as $name) {
+    $source = (string) file_get_contents($file->getPathname());
+    foreach (twig_unknown($source, $filters, $functions) as $name) {
         $failures[] = $relative . ' uses ' . $name;
+    }
+    if (preg_match("/['\"][^'\"]*api\\/[^'\"]*['\"]\\s*\\|\\s*url\\b/", $source) === 1) {
+        $failures[] = $relative . ' pipes an api/ path through url';
     }
 }
 
