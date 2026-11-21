@@ -18,7 +18,7 @@ jobs:
           php-version: ${{ matrix.php }}
           coverage: none
       - run: find src tests bin -name '*.php' -print0 | xargs -0 -n1 php -l
-      - name: Build the install package
+      - name: Build the install package and validate the directory ZIP manifest
         run: php bin/package.php
       - run: php tests/alert.php
       - run: php tests/cron.php
