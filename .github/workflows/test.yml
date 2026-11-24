@@ -1,0 +1,28 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  php:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - run: find src tests bin -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Build the install package and validate the directory ZIP manifest
+        run: php bin/package.php
+      - run: php tests/alert.php
+      - run: php tests/cron.php
+      - name: Reject Twig names FOSSBilling 0.8.9 does not register
+        run: php tests/twig-filters.php
+      - run: composer update --no-interaction --prefer-dist
+      - run: vendor/bin/phpunit
