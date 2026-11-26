@@ -97,7 +97,6 @@ class Service implements InjectionAwareInterface, WidgetProviderInterface
      */
     public function card(bool $refresh = false, ?int $staffId = null): array
     {
-        unset($staffId);
         $this->assertManage();
         $now = new \DateTimeImmutable('now');
         $store = new BalanceCache($this->di['cache']);
@@ -106,16 +105,16 @@ class Service implements InjectionAwareInterface, WidgetProviderInterface
 
             return $cached;
         }
-        if ($store->locked('enombalance.refresh')) {
+        $lock = RefreshLock::key($staffId);
+        if ($store->locked($lock)) {
             $cached = $this->cacheGet('enombalance.card');
-            if (is_array($cached)) {
-                return $cached;
-            }
+
+            return RefreshLock::inProgress(is_array($cached) ? $cached : null);
         }
 
         $card = $this->freshCard($now);
         $this->cacheSet('enombalance.card', $card, BalanceCard::CACHE_SECONDS);
-        $this->cacheSet('enombalance.refresh', '1', 60);
+        $this->cacheSet($lock, '1', 60);
 
         return $card;
     }
