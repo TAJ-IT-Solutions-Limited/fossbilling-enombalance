@@ -42,9 +42,11 @@ namespace Pimple {
 }
 
 namespace {
+require dirname(__DIR__) . '/src/RefreshLock.php';
 require dirname(__DIR__) . '/src/Service.php';
 require dirname(__DIR__) . '/src/EnomBalanceSource.php';
 
+use Box\Mod\Enombalance\RefreshLock;
 use Box\Mod\Enombalance\Service;
 
 $failed = 0;
@@ -65,8 +67,8 @@ check(Service::alertRecipient('accounts@example.com', 'cron@example.com') === 'a
 check(Service::alertRecipient('cron@example.com', 'cron@example.com') === null, 'the cron account is not an alert recipient');
 check(Service::alertRecipient('  ', 'cron@example.com') === null, 'an empty company email sends no alert');
 check(str_contains((string) file_get_contents(dirname(__DIR__) . '/src/Service.php'), "checkPermissions('enombalance', 'manage')"), 'the balance card asks for the manage permission');
-check(str_contains((string) file_get_contents(dirname(__DIR__) . '/src/Service.php'), "'enombalance.refresh'"), 'refresh uses one lock for every staff member');
-check(!str_contains((string) file_get_contents(dirname(__DIR__) . '/src/Service.php'), 'enombalance.refresh.\' . $staffId'), 'refresh is not locked per staff member');
+check(RefreshLock::key(4) === 'enombalance.refresh.4' && RefreshLock::key(9) === 'enombalance.refresh.9', 'refresh uses one lock per staff member');
+check(str_contains((string) file_get_contents(dirname(__DIR__) . '/src/Service.php'), 'RefreshLock::key($staffId)'), 'refresh is locked per staff member');
 
 if ($failed > 0) {
     exit(1);
